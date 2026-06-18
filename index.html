@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>uBlue Trading Terminal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/klinecharts/dist/klinecharts.min.js"></script>
+</head>
+<body class="bg-gray-900 text-white h-screen flex flex-col p-4">
+
+	<div class="flex justify-between items-center mb-4 bg-gray-800 p-4 rounded-lg shadow-lg border-b border-gray-700" style="-webkit-app-region: drag;">
+        <div class="flex items-center gap-3">
+            <h1 class="text-2xl font-bold text-blue-400">uBlue Terminal</h1>
+            <span id="chart-header-title" class="text-gray-400 font-semibold mt-1">| รอการเชื่อมต่อ...</span>
+        </div>
+        <div class="flex space-x-4">
+            <span id="status-mt5" class="px-2 py-1 bg-red-600 rounded text-sm shadow font-bold" style="-webkit-app-region: no-drag;">MT5 Offline</span>
+            <span id="status-ollama" class="px-2 py-1 bg-red-600 rounded text-sm shadow font-bold" style="-webkit-app-region: no-drag;">Ollama Offline</span>
+        </div>
+    </div>
+
+    <div class="flex gap-4 flex-1 h-full min-h-0">
+        <div class="w-1/3 flex flex-col gap-4 overflow-y-auto pr-1">
+            <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 shadow">
+                <h2 class="font-semibold mb-2 text-gray-300">Server Configuration</h2>
+                <div class="flex gap-2 mb-2">
+                    <input type="text" id="server-ip" placeholder="IP Address" class="w-2/3 p-2 bg-gray-700 rounded border border-gray-600 text-sm focus:border-blue-500 focus:outline-none">
+                    <input type="text" id="server-port" class="w-1/3 p-2 bg-gray-700 rounded border border-gray-600 text-sm focus:border-blue-500 focus:outline-none">
+                </div>
+                
+                <h2 class="font-semibold mb-2 mt-3 text-gray-300">Symbol (คู่เงิน)</h2>
+                <div class="flex gap-2 mb-3">
+                    <select id="symbol-select" class="flex-1 p-2 bg-gray-700 rounded border border-gray-600 text-sm cursor-pointer"></select>
+                    <button onclick="addSymbol()" class="px-3 bg-green-600 hover:bg-green-500 rounded text-sm font-bold shadow">+</button>
+                    <button onclick="deleteSymbol()" class="px-3 bg-red-600 hover:bg-red-500 rounded text-sm font-bold shadow">-</button>
+                </div>
+
+                <button onclick="connectToServer()" id="btn-connect" class="w-full bg-blue-600 hover:bg-blue-500 py-3 rounded font-bold transition shadow-lg mt-2">Connect Server</button>
+            </div>
+
+            <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 shadow flex justify-between items-center">
+                <span class="text-gray-400 text-sm font-semibold">Live Broker Time:</span>
+                <span id="server-time" class="font-mono text-green-400 font-bold text-lg">-- --- -- --:--:--</span>
+            </div>
+
+            <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 flex-1 flex flex-col shadow">
+                <div class="flex justify-between items-center mb-2">
+                    <h2 class="font-semibold text-gray-300">AI Prompt Profiles</h2>
+                    <button onclick="saveCurrentProfile()" class="px-3 py-1 bg-green-600 hover:bg-green-500 text-xs rounded font-bold shadow">💾 Save Prompt</button>
+                </div>
+                
+                <div class="flex gap-2 mb-2">
+                    <select id="profile-select" class="flex-1 p-2 bg-gray-700 rounded border border-gray-600 text-sm cursor-pointer"></select>
+                    <button onclick="addProfile()" class="px-3 bg-gray-600 hover:bg-gray-500 rounded text-sm font-bold shadow">+</button>
+                    <button onclick="deleteProfile()" class="px-3 bg-red-600 hover:bg-red-500 rounded text-sm font-bold shadow">-</button>
+                </div>
+
+                <select id="model-select" class="w-full mb-2 p-2 bg-gray-700 rounded border border-gray-600 text-sm"></select>
+                <textarea id="prompt-box" class="w-full flex-1 p-3 bg-gray-900 rounded border border-gray-600 resize-none text-sm mt-1 focus:border-blue-500 focus:outline-none" placeholder="เขียน Prompt วิเคราะห์กราฟ..."></textarea>
+                
+                <button onclick="runAnalysis()" id="btn-analyze" class="w-full bg-indigo-600 hover:bg-indigo-500 py-3 mt-3 rounded font-bold transition shadow-lg flex justify-center items-center gap-2">
+                    <span>✨ Start AI Analysis</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="w-2/3 flex flex-col gap-4 h-full">
+            <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 flex-1 flex flex-col shadow min-h-[350px]">
+                <div class="flex justify-between items-center mb-2">
+                    <div class="flex space-x-1 bg-gray-900 p-1 rounded border border-gray-700" id="tf-buttons">
+                        <button onclick="changeTF('M1')" class="tf-btn px-3 py-1 text-xs rounded font-semibold text-gray-400 hover:text-white">M1</button>
+                        <button onclick="changeTF('M5')" class="tf-btn px-3 py-1 text-xs rounded font-semibold text-gray-400 hover:text-white">M5</button>
+                        <button onclick="changeTF('M15')" class="tf-btn px-3 py-1 text-xs rounded font-semibold bg-blue-600 text-white shadow">M15</button>
+                        <button onclick="changeTF('M30')" class="tf-btn px-3 py-1 text-xs rounded font-semibold text-gray-400 hover:text-white">M30</button>
+                        <button onclick="changeTF('1H')" class="tf-btn px-3 py-1 text-xs rounded font-semibold text-gray-400 hover:text-white">1H</button>
+                        <button onclick="changeTF('4H')" class="tf-btn px-3 py-1 text-xs rounded font-semibold text-gray-400 hover:text-white">4H</button>
+                        <button onclick="changeTF('1D')" class="tf-btn px-3 py-1 text-xs rounded font-semibold text-gray-400 hover:text-white">1D</button>
+                    </div>
+
+                    <div class="flex space-x-2 text-xs">
+                        <button onclick="toggleIndicator('MA')" class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 font-semibold">MA</button>
+                        <button onclick="toggleIndicator('MACD')" class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 font-semibold">MACD</button>
+                        <button onclick="toggleIndicator('RSI')" class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 font-semibold">RSI</button>
+                        <span class="text-gray-500 font-bold">|</span>
+                        <button onclick="addOverlay('segment')" class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 font-semibold">Trend Line</button>
+                        <button onclick="addOverlay('fibonacciLine')" class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 font-semibold">Fibo</button>
+                        <button onclick="chart.removeOverlay()" class="px-3 py-1 bg-red-900 rounded hover:bg-red-800 font-semibold">Clear</button>
+                    </div>
+                </div>
+                
+                <div id="tv-chart" class="flex-1 w-full relative"></div>
+            </div>
+
+            <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 h-64 flex flex-col shadow">
+                <h2 class="font-semibold text-green-400 mb-2 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    AI Analysis Report
+                </h2>
+                <div id="ai-report" class="flex-1 w-full bg-gray-900 rounded border border-gray-600 p-4 overflow-y-auto text-sm text-gray-300 whitespace-pre-wrap leading-relaxed shadow-inner">ระบบพร้อมทำงาน...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chart = klinecharts.init('tv-chart');
+        chart.setStyles({
+            grid: { horizontal: { color: '#374151', style: 'dashed' }, vertical: { color: '#374151', style: 'dashed' } },
+            candle: { type: 'candle_solid', bar: { upColor: '#22c55e', downColor: '#ef4444', noChangeColor: '#888888' } },
+            xAxis: { tickText: { color: '#9ca3af' } }, yAxis: { tickText: { color: '#9ca3af' } }
+        });
+
+        let activeIndicators = { MA: false, MACD: false, RSI: false };
+        function toggleIndicator(name) {
+            if (!activeIndicators[name]) {
+                if (name === 'MA') chart.createIndicator('MA', true, { id: 'candle_pane' });
+                else chart.createIndicator(name, false, { id: `pane_${name}` });
+                activeIndicators[name] = true;
+            } else {
+                if (name === 'MA') chart.removeIndicator('candle_pane', 'MA');
+                else chart.removeIndicator(`pane_${name}`, name);
+                activeIndicators[name] = false;
+            }
+        }
+
+        function addOverlay(type) { chart.createOverlay({ name: type, extendBndLine: true }); }
+
+        var ws = null;
+        let config = {};
+
+        function formatBrokerTime(unixSeconds) {
+            const d = new Date(unixSeconds * 1000);
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            return `${d.getUTCDate().toString().padStart(2,'0')} ${months[d.getUTCMonth()]} ${d.getUTCFullYear().toString().slice(-2)} ${d.getUTCHours().toString().padStart(2,'0')}:${d.getUTCMinutes().toString().padStart(2,'0')}:${d.getUTCSeconds().toString().padStart(2,'0')}`;
+        }
+
+        window.addEventListener('pywebviewready', async function() {
+            config = await pywebview.api.get_config();
+            document.getElementById('server-ip').value = config.ip || "";
+            document.getElementById('server-port').value = config.port || "5001";
+            if(!config.symbols) config.symbols = ["XAUUSD"];
+            if(!config.last_symbol) config.last_symbol = config.symbols[0];
+            if(!config.timeframe) config.timeframe = "M15";
+
+            document.getElementById('server-ip').addEventListener('input', e => pywebview.api.save_config("ip", e.target.value));
+            document.getElementById('server-port').addEventListener('input', e => pywebview.api.save_config("port", e.target.value));
+
+            refreshSymbolList();
+            updateTFUI(config.timeframe);
+
+            const models = await pywebview.api.get_ollama_models();
+            const modelSelect = document.getElementById('model-select');
+            modelSelect.innerHTML = '';
+            if(models.length > 0) models.forEach(m => { modelSelect.add(new Option(m, m)); });
+            else modelSelect.add(new Option("ไม่พบโมเดล", ""));
+
+            await refreshProfileList();
+
+            setInterval(async () => {
+                const isOnline = await pywebview.api.check_ollama_status();
+                const el = document.getElementById('status-ollama');
+                el.className = isOnline ? "px-2 py-1 bg-green-600 rounded text-sm shadow" : "px-2 py-1 bg-red-600 rounded text-sm shadow";
+                el.innerText = isOnline ? "Ollama Online" : "Ollama Offline";
+            }, 3000);
+        });
+
+        // --- ระบบสลับ Timeframe แบบ Realtime ไร้รอยต่อ ---
+        function changeTF(tf) {
+            config.timeframe = tf;
+            pywebview.api.save_config("timeframe", tf);
+            updateTFUI(tf);
+            
+            if(ws && ws.readyState === WebSocket.OPEN) {
+                // ส่งคำสั่งเปลี่ยน TF ไปที่ Server ทันที
+                ws.send(JSON.stringify({action: "change_tf", tf: tf}));
+            } else {
+                connectToServer();
+            }
+        }
+
+        function updateTFUI(tf) {
+            document.querySelectorAll('.tf-btn').forEach(btn => {
+                btn.className = (btn.innerText === tf) 
+                    ? "tf-btn px-3 py-1 text-xs rounded font-semibold bg-blue-600 text-white shadow" 
+                    : "tf-btn px-3 py-1 text-xs rounded font-semibold text-gray-400 hover:text-white";
+            });
+            document.getElementById('chart-header-title').innerText = `| ${config.last_symbol} (${tf})`;
+        }
+
+        // --- ระบบสลับคู่เงิน แบบ Realtime ไร้รอยต่อ ---
+        function refreshSymbolList() {
+            const selectEl = document.getElementById('symbol-select');
+            selectEl.innerHTML = '';
+            config.symbols.forEach(sym => selectEl.add(new Option(sym, sym)));
+            selectEl.value = config.last_symbol;
+            document.getElementById('chart-header-title').innerText = `| ${config.last_symbol} (${config.timeframe})`;
+        }
+
+        async function addSymbol() {
+            const newSym = prompt("ระบุชื่อคู่เงินให้ตรงกับ MT5:");
+            if (newSym && newSym.trim()) {
+                if (!config.symbols.includes(newSym.trim())) {
+                    config.symbols.push(newSym.trim());
+                    await pywebview.api.save_config("symbols", config.symbols);
+                }
+                config.last_symbol = newSym.trim();
+                await pywebview.api.save_config("last_symbol", config.last_symbol);
+                refreshSymbolList();
+            }
+        }
+
+        async function deleteSymbol() {
+            if (config.symbols.length <= 1) return alert("ต้องมีอย่างน้อย 1 คู่เงิน");
+            if (confirm(`ลบคู่เงิน "${config.last_symbol}" ?`)) {
+                config.symbols = config.symbols.filter(s => s !== config.last_symbol);
+                config.last_symbol = config.symbols[0];
+                await pywebview.api.save_config("symbols", config.symbols);
+                await pywebview.api.save_config("last_symbol", config.last_symbol);
+                refreshSymbolList();
+            }
+        }
+
+        document.getElementById('symbol-select').addEventListener('change', async (e) => {
+            config.last_symbol = e.target.value;
+            await pywebview.api.save_config("last_symbol", config.last_symbol);
+            document.getElementById('chart-header-title').innerText = `| ${config.last_symbol} (${config.timeframe})`;
+            
+            if(ws && ws.readyState === WebSocket.OPEN) {
+                // ส่งคำสั่งเปลี่ยนคู่เงิน ไปที่ Server ทันที
+                ws.send(JSON.stringify({action: "change_symbol", symbol: config.last_symbol}));
+            } else {
+                connectToServer();
+            }
+        });
+
+        function connectToServer() {
+            const ip = document.getElementById('server-ip').value.trim();
+            const port = document.getElementById('server-port').value.trim();
+            const btn = document.getElementById('btn-connect');
+            const statusEl = document.getElementById('status-mt5');
+
+            if(!ip) return alert("กรุณาใส่ IP Address");
+            if(ws) ws.close();
+            
+            btn.innerText = "Connecting...";
+            ws = new WebSocket(`ws://${ip}:${port}/ws/chart?symbol=${config.last_symbol}&timeframe=${config.timeframe}`);
+            
+            ws.onopen = () => { 
+                statusEl.className = "px-2 py-1 bg-green-600 rounded text-sm shadow"; statusEl.innerText = "MT5 Online"; 
+                btn.innerText = `Connected`; btn.className = "w-full bg-green-600 py-3 rounded font-bold transition shadow-lg cursor-default";
+            };
+            
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                if (msg.type === 'history') { 
+                    // ใช้ applyNewData เพื่อเคลียร์กราฟเก่าและวาดใหม่ทันที
+                    chart.applyNewData(msg.data.map(r => ({ timestamp: r.time * 1000, open: r.open, high: r.high, low: r.low, close: r.close, volume: r.volume })));
+                } else if (msg.type === 'tick') {
+                    chart.updateData({ timestamp: msg.data.time * 1000, open: msg.data.open, high: msg.data.high, low: msg.data.low, close: msg.data.close, volume: msg.data.volume });
+                    document.getElementById('server-time').innerText = formatBrokerTime(msg.data.time);
+                }
+            };
+            
+            ws.onclose = () => { 
+                statusEl.className = "px-2 py-1 bg-red-600 rounded text-sm shadow"; statusEl.innerText = "MT5 Offline"; 
+                btn.innerText = "Connect Server"; btn.className = "w-full bg-blue-600 hover:bg-blue-500 py-3 rounded font-bold transition shadow-lg";
+            };
+        }
+
+        async function refreshProfileList() {
+            const selectEl = document.getElementById('profile-select');
+            const profiles = await pywebview.api.get_all_profiles();
+            const curr = selectEl.value;
+            selectEl.innerHTML = '';
+            profiles.forEach(name => selectEl.add(new Option(name, name)));
+            if (curr && profiles.includes(curr)) selectEl.value = curr;
+            else if (profiles.length > 0) selectEl.value = profiles[0];
+            await loadProfile();
+        }
+
+        document.getElementById('profile-select').addEventListener('change', loadProfile);
+        document.getElementById('prompt-box').addEventListener('input', saveCurrentProfile);
+        document.getElementById('model-select').addEventListener('change', saveCurrentProfile);
+
+        async function loadProfile() {
+            const profileName = document.getElementById('profile-select').value;
+            if(!profileName) return;
+            const profile = await pywebview.api.load_profile(profileName);
+            if(profile) {
+                const modelSelect = document.getElementById('model-select');
+                if(profile.model && Array.from(modelSelect.options).some(opt => opt.value === profile.model)) modelSelect.value = profile.model;
+                document.getElementById('prompt-box').value = profile.prompt || "";
+            }
+        }
+
+        async function saveCurrentProfile() {
+            const profileName = document.getElementById('profile-select').value;
+            if(profileName) await pywebview.api.save_profile(profileName, document.getElementById('model-select').value, document.getElementById('prompt-box').value);
+        }
+
+        async function addProfile() {
+            const newName = prompt("ตั้งชื่อโปรไฟล์ใหม่:");
+            if(newName && newName.trim()) {
+                await pywebview.api.save_profile(newName.trim(), document.getElementById('model-select').value, document.getElementById('prompt-box').value);
+                await refreshProfileList();
+            }
+        }
+
+        async function deleteProfile() {
+            const profileName = document.getElementById('profile-select').value;
+            if(!profileName) return;
+            if(confirm(`ลบโปรไฟล์ "${profileName}" ?`)) {
+                await pywebview.api.delete_profile(profileName);
+                await refreshProfileList();
+            }
+        }
+
+        async function runAnalysis() {
+            const profileName = document.getElementById('profile-select').value;
+            const model = document.getElementById('model-select').value;
+            const userPrompt = document.getElementById('prompt-box').value;
+            const reportBox = document.getElementById('ai-report');
+            const btn = document.getElementById('btn-analyze');
+            const ip = document.getElementById('server-ip').value.trim();
+            const port = document.getElementById('server-port').value.trim();
+            
+            if(!profileName || !userPrompt.trim()) return alert("กรุณาเขียน Prompt");
+            if(document.getElementById('status-mt5').innerText === "MT5 Offline") return alert("กรุณา Connect Server ก่อนครับ");
+
+            await saveCurrentProfile();
+            
+            btn.innerHTML = `<div class="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin"></div> <span>ดึงข้อมูล & วิเคราะห์...</span>`;
+            btn.className = "w-full bg-indigo-800 py-3 mt-3 rounded font-bold transition shadow-lg cursor-wait flex justify-center items-center gap-2";
+            reportBox.innerHTML = `<div class="flex flex-col items-center justify-center h-full space-y-3 text-indigo-400">
+                <div class="w-6 h-6 border-4 border-t-transparent border-indigo-400 rounded-full animate-spin"></div>
+                <span>กำลังดึงข้อมูลตลาดสด และวิเคราะห์ด้วย ${model}...</span>
+            </div>`;
+
+            let marketDataText = `\n\n=== ข้อมูลตลาดปัจจุบัน (${config.last_symbol}) ===\n`;
+            try {
+                // ดึง TF ปัจจุบัน (20 แท่งล่าสุด)
+                const res1 = await fetch(`http://${ip}:${port}/api/data?symbol=${config.last_symbol}&timeframe=${config.timeframe}&count=20`);
+                const data1 = await res1.json();
+                if(data1.status === 'success') {
+                    marketDataText += `[Timeframe ${config.timeframe} (20 แท่งล่าสุด)]\n`;
+                    data1.data.forEach(d => { marketDataText += `เวลา: ${formatBrokerTime(d.time)} | O: ${d.open} | H: ${d.high} | L: ${d.low} | C: ${d.close}\n`; });
+                }
+
+                // ดึง 1D (5 วันล่าสุด) เพื่อวิเคราะห์ภาพรวม Trend
+                const res2 = await fetch(`http://${ip}:${port}/api/data?symbol=${config.last_symbol}&timeframe=1D&count=5`);
+                const data2 = await res2.json();
+                if(data2.status === 'success') {
+                    marketDataText += `\n[Timeframe 1D ภาพรวม (5 แท่งล่าสุด)]\n`;
+                    data2.data.forEach(d => { marketDataText += `เวลา: ${formatBrokerTime(d.time)} | O: ${d.open} | H: ${d.high} | L: ${d.low} | C: ${d.close}\n`; });
+                }
+            } catch(e) { console.error("API Error", e); }
+
+            const finalPrompt = userPrompt + marketDataText;
+            const result = await pywebview.api.analyze_market(model, finalPrompt);
+            
+            btn.innerHTML = `✨ Start AI Analysis`;
+            btn.className = "w-full bg-indigo-600 hover:bg-indigo-500 py-3 mt-3 rounded font-bold transition shadow-lg flex justify-center items-center gap-2";
+
+            if(result.status === "success") { reportBox.innerHTML = `<span class="text-gray-100">${result.response}</span>`; } 
+            else { reportBox.innerHTML = `<span class="text-red-400 font-bold">Error:</span><br>${result.message}`; }
+        }
+    </script>
+</body>
+</html>
