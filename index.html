@@ -8,14 +8,14 @@
 </head>
 <body class="bg-gray-900 text-white h-screen flex flex-col p-4">
 
-	<div class="flex justify-between items-center mb-4 bg-gray-800 p-4 rounded-lg shadow-lg border-b border-gray-700" style="-webkit-app-region: drag;">
+	<div class="flex justify-between items-center mb-4 bg-gray-800 p-4 pl-20 rounded-lg shadow-lg border-b border-gray-700">
         <div class="flex items-center gap-3">
-            <h1 class="text-2xl font-bold text-blue-400">uBlue Terminal</h1>
+            <h1 class="text-2xl font-bold text-blue-400">AI Forex Trading Terminal</h1>
             <span id="chart-header-title" class="text-gray-400 font-semibold mt-1">| รอการเชื่อมต่อ...</span>
         </div>
         <div class="flex space-x-4">
-            <span id="status-mt5" class="px-2 py-1 bg-red-600 rounded text-sm shadow font-bold" style="-webkit-app-region: no-drag;">MT5 Offline</span>
-            <span id="status-ollama" class="px-2 py-1 bg-red-600 rounded text-sm shadow font-bold" style="-webkit-app-region: no-drag;">Ollama Offline</span>
+            <span id="status-mt5" class="px-2 py-1 bg-red-600 rounded text-sm shadow font-bold">MT5 Offline</span>
+            <span id="status-ollama" class="px-2 py-1 bg-red-600 rounded text-sm shadow font-bold">Ollama Offline</span>
         </div>
     </div>
 
@@ -55,7 +55,10 @@
                     <button onclick="deleteProfile()" class="px-3 bg-red-600 hover:bg-red-500 rounded text-sm font-bold shadow">-</button>
                 </div>
 
-                <select id="model-select" class="w-full mb-2 p-2 bg-gray-700 rounded border border-gray-600 text-sm"></select>
+                <div class="flex gap-2 mb-2">
+                    <select id="model-select" class="flex-1 p-2 bg-gray-700 rounded border border-gray-600 text-sm focus:border-blue-500 focus:outline-none"></select>
+                    <button onclick="refreshModels()" id="btn-refresh-models" class="px-3 bg-blue-600 hover:bg-blue-500 rounded text-sm font-bold shadow transition" title="โหลดรายชื่อโมเดลใหม่">🔄</button>
+                </div>
                 <textarea id="prompt-box" class="w-full flex-1 p-3 bg-gray-900 rounded border border-gray-600 resize-none text-sm mt-1 focus:border-blue-500 focus:outline-none" placeholder="เขียน Prompt วิเคราะห์กราฟ..."></textarea>
                 
                 <button onclick="runAnalysis()" id="btn-analyze" class="w-full bg-indigo-600 hover:bg-indigo-500 py-3 mt-3 rounded font-bold transition shadow-lg flex justify-center items-center gap-2">
@@ -281,6 +284,34 @@
         document.getElementById('prompt-box').addEventListener('input', saveCurrentProfile);
         document.getElementById('model-select').addEventListener('change', saveCurrentProfile);
 
+// --- ฟังก์ชันรีโหลดรายชื่อโมเดล AI ---
+        async function refreshModels() {
+            const btn = document.getElementById('btn-refresh-models');
+            const modelSelect = document.getElementById('model-select');
+            const currentModel = modelSelect.value; // จำโมเดลที่เลือกไว้ล่าสุด
+            
+            // เปลี่ยนหน้าตาปุ่มเพื่อให้รู้ว่ากำลังโหลด
+            if(btn) btn.innerHTML = `<div class="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin"></div>`;
+
+            // ดึงรายชื่อใหม่จาก Python
+            const models = await pywebview.api.get_ollama_models();
+            modelSelect.innerHTML = '';
+            
+            if(models && models.length > 0) {
+                models.forEach(m => { modelSelect.add(new Option(m, m)); });
+                
+                // ถ้าโมเดลเดิมยังอยู่ในเครื่อง ให้เลือกตัวเดิมไว้
+                if(currentModel && models.includes(currentModel)) {
+                    modelSelect.value = currentModel;
+                }
+            } else {
+                modelSelect.add(new Option("ไม่พบโมเดล", ""));
+            }
+
+            // คืนหน้าตาปุ่มกลับเป็นปกติ
+            if(btn) btn.innerHTML = "🔄";
+        }
+		
         async function loadProfile() {
             const profileName = document.getElementById('profile-select').value;
             if(!profileName) return;
