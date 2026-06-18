@@ -2,13 +2,14 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>uBlue Trading Terminal</title>
+    <title>AI Forex Trading Terminal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/klinecharts/dist/klinecharts.min.js"></script>
 </head>
 <body class="bg-gray-900 text-white h-screen flex flex-col p-4">
 
-	<div class="flex justify-between items-center mb-4 bg-gray-800 p-4 pl-20 rounded-lg shadow-lg border-b border-gray-700">
+    <!-- Header & Status (เพิ่มช่อง pl-20 เพื่อไม่ให้ข้อความไปบดบังปุ่มไฟจราจรของ Mac) -->
+    <div class="flex justify-between items-center mb-4 bg-gray-800 p-4 pl-20 rounded-lg shadow-lg border-b border-gray-700">
         <div class="flex items-center gap-3">
             <h1 class="text-2xl font-bold text-blue-400">AI Forex Trading Terminal</h1>
             <span id="chart-header-title" class="text-gray-400 font-semibold mt-1">| รอการเชื่อมต่อ...</span>
@@ -20,6 +21,7 @@
     </div>
 
     <div class="flex gap-4 flex-1 h-full min-h-0">
+        <!-- ซ้าย: การตั้งค่า -->
         <div class="w-1/3 flex flex-col gap-4 overflow-y-auto pr-1">
             <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 shadow">
                 <h2 class="font-semibold mb-2 text-gray-300">Server Configuration</h2>
@@ -34,7 +36,6 @@
                     <button onclick="addSymbol()" class="px-3 bg-green-600 hover:bg-green-500 rounded text-sm font-bold shadow">+</button>
                     <button onclick="deleteSymbol()" class="px-3 bg-red-600 hover:bg-red-500 rounded text-sm font-bold shadow">-</button>
                 </div>
-
                 <button onclick="connectToServer()" id="btn-connect" class="w-full bg-blue-600 hover:bg-blue-500 py-3 rounded font-bold transition shadow-lg mt-2">Connect Server</button>
             </div>
 
@@ -43,10 +44,11 @@
                 <span id="server-time" class="font-mono text-green-400 font-bold text-lg">-- --- -- --:--:--</span>
             </div>
 
+            <!-- AI Prompts & Data Context -->
             <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 flex-1 flex flex-col shadow">
                 <div class="flex justify-between items-center mb-2">
                     <h2 class="font-semibold text-gray-300">AI Prompt Profiles</h2>
-                    <button onclick="saveCurrentProfile()" class="px-3 py-1 bg-green-600 hover:bg-green-500 text-xs rounded font-bold shadow">💾 Save Prompt</button>
+                    <button onclick="saveCurrentProfile()" class="px-3 py-1 bg-green-600 hover:bg-green-500 text-xs rounded font-bold shadow">💾 Save</button>
                 </div>
                 
                 <div class="flex gap-2 mb-2">
@@ -59,7 +61,30 @@
                     <select id="model-select" class="flex-1 p-2 bg-gray-700 rounded border border-gray-600 text-sm focus:border-blue-500 focus:outline-none"></select>
                     <button onclick="refreshModels()" id="btn-refresh-models" class="px-3 bg-blue-600 hover:bg-blue-500 rounded text-sm font-bold shadow transition" title="โหลดรายชื่อโมเดลใหม่">🔄</button>
                 </div>
-                <textarea id="prompt-box" class="w-full flex-1 p-3 bg-gray-900 rounded border border-gray-600 resize-none text-sm mt-1 focus:border-blue-500 focus:outline-none" placeholder="เขียน Prompt วิเคราะห์กราฟ..."></textarea>
+
+                <!-- แผงควบคุมกำหนดแท่งเทียน (แบบพับเก็บได้ ไม่บังหน้าจอ) -->
+                <div class="mt-2 mb-2 bg-gray-900 rounded border border-gray-700 shadow-inner overflow-hidden">
+                    <button onclick="toggleAIContext()" class="w-full flex items-center justify-between p-3 text-xs font-semibold text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition focus:outline-none">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                            ตั้งค่าส่งข้อมูลกราฟ (คลิกพับ/กาง)
+                        </div>
+                        <svg id="ai-context-icon" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div id="ai-context-menu" class="hidden px-3 pb-3 grid grid-cols-2 gap-2"></div>
+                </div>
+
+                <!-- ⚙️ กล่อง System Prompt แยกบทบาทออกจากคำสั่งปกติอย่างเป็นเอกเทศ -->
+                <div class="mt-1 flex flex-col gap-1">
+                    <label class="text-xs text-gray-400 font-semibold">⚙️ System Prompt (กฎเกณฑ์/บทบาทของ AI):</label>
+                    <textarea id="system-prompt-box" class="w-full p-2 bg-gray-900 text-green-400 rounded border border-gray-600 resize-none text-xs focus:border-blue-500 outline-none h-16 shadow-inner" placeholder="ระบุกฎเหล็ก เช่น ตอบเป็น JSON เท่านั้น หรือ ห้ามพูดยาว..."></textarea>
+                </div>
+                
+                <!-- 🗣️ กล่อง User Prompt ปกติสำหรับสั่งงาน -->
+                <div class="mt-2 flex flex-col gap-1 flex-1">
+                    <label class="text-xs text-gray-400 font-semibold">🗣️ User Prompt (คำสั่งวิเคราะห์/เงื่อนไขเพิ่มเติม):</label>
+                    <textarea id="prompt-box" class="w-full flex-1 p-3 bg-gray-900 rounded border border-gray-600 resize-none text-sm focus:border-blue-500 outline-none shadow-inner" placeholder="เขียนคำสั่งวิเคราะห์กราฟ..."></textarea>
+                </div>
                 
                 <button onclick="runAnalysis()" id="btn-analyze" class="w-full bg-indigo-600 hover:bg-indigo-500 py-3 mt-3 rounded font-bold transition shadow-lg flex justify-center items-center gap-2">
                     <span>✨ Start AI Analysis</span>
@@ -67,6 +92,7 @@
             </div>
         </div>
 
+        <!-- ขวา: กราฟและการวิเคราะห์ -->
         <div class="w-2/3 flex flex-col gap-4 h-full">
             <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 flex-1 flex flex-col shadow min-h-[350px]">
                 <div class="flex justify-between items-center mb-2">
@@ -79,7 +105,6 @@
                         <button onclick="changeTF('4H')" class="tf-btn px-3 py-1 text-xs rounded font-semibold text-gray-400 hover:text-white">4H</button>
                         <button onclick="changeTF('1D')" class="tf-btn px-3 py-1 text-xs rounded font-semibold text-gray-400 hover:text-white">1D</button>
                     </div>
-
                     <div class="flex space-x-2 text-xs">
                         <button onclick="toggleIndicator('MA')" class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 font-semibold">MA</button>
                         <button onclick="toggleIndicator('MACD')" class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 font-semibold">MACD</button>
@@ -90,7 +115,6 @@
                         <button onclick="chart.removeOverlay()" class="px-3 py-1 bg-red-900 rounded hover:bg-red-800 font-semibold">Clear</button>
                     </div>
                 </div>
-                
                 <div id="tv-chart" class="flex-1 w-full relative"></div>
             </div>
 
@@ -124,11 +148,11 @@
                 activeIndicators[name] = false;
             }
         }
-
         function addOverlay(type) { chart.createOverlay({ name: type, extendBndLine: true }); }
 
         var ws = null;
         let config = {};
+        const ALL_TFS = ["M1", "M5", "M15", "M30", "1H", "4H", "1D"];
 
         function formatBrokerTime(unixSeconds) {
             const d = new Date(unixSeconds * 1000);
@@ -149,31 +173,89 @@
 
             refreshSymbolList();
             updateTFUI(config.timeframe);
+            renderAIContextUI();
 
-            const models = await pywebview.api.get_ollama_models();
-            const modelSelect = document.getElementById('model-select');
-            modelSelect.innerHTML = '';
-            if(models.length > 0) models.forEach(m => { modelSelect.add(new Option(m, m)); });
-            else modelSelect.add(new Option("ไม่พบโมเดล", ""));
-
+            await refreshModels();
             await refreshProfileList();
+
+            // ลิสเนอร์สำหรับออโต้เซฟตอนกรอกข้อมูล Prompt ทั้งฝั่ง System และ User
+            document.getElementById('system-prompt-box').addEventListener('input', saveCurrentProfile);
+            document.getElementById('prompt-box').addEventListener('input', saveCurrentProfile);
+            document.getElementById('model-select').addEventListener('change', saveCurrentProfile);
 
             setInterval(async () => {
                 const isOnline = await pywebview.api.check_ollama_status();
                 const el = document.getElementById('status-ollama');
-                el.className = isOnline ? "px-2 py-1 bg-green-600 rounded text-sm shadow" : "px-2 py-1 bg-red-600 rounded text-sm shadow";
+                el.className = isOnline ? "px-2 py-1 bg-green-600 rounded text-sm shadow font-bold" : "px-2 py-1 bg-red-600 rounded text-sm shadow font-bold";
                 el.innerText = isOnline ? "Ollama Online" : "Ollama Offline";
             }, 3000);
         });
 
-        // --- ระบบสลับ Timeframe แบบ Realtime ไร้รอยต่อ ---
+        function renderAIContextUI() {
+            const container = document.getElementById('ai-context-menu');
+            container.innerHTML = '';
+            const aiConfig = config.ai_context || { "M15": 20, "1D": 5 };
+            
+            ALL_TFS.forEach(tf => {
+                const isChecked = aiConfig.hasOwnProperty(tf);
+                const count = isChecked ? aiConfig[tf] : 20;
+                container.innerHTML += `
+                <div class="flex items-center justify-between bg-gray-800 p-1 px-2 rounded border border-gray-700 hover:border-gray-500 transition">
+                    <label class="flex items-center gap-2 cursor-pointer flex-1">
+                        <input type="checkbox" id="ai-tf-${tf}" class="w-4 h-4 accent-green-500 cursor-pointer" ${isChecked ? 'checked' : ''} onchange="saveAIContext()">
+                        <span class="text-xs text-gray-200 font-semibold">${tf}</span>
+                    </label>
+                    <div class="flex items-center gap-1">
+                        <span class="text-[10px] text-gray-400">แท่ง:</span>
+                        <input type="number" id="ai-count-${tf}" value="${count}" min="1" max="200" class="w-12 p-0.5 bg-gray-900 border border-gray-600 rounded text-xs text-center focus:border-blue-500 outline-none" onchange="saveAIContext()">
+                    </div>
+                </div>`;
+            });
+        }
+
+        async function saveAIContext() {
+            let newAiConfig = {};
+            ALL_TFS.forEach(tf => {
+                const isChecked = document.getElementById(`ai-tf-${tf}`).checked;
+                if(isChecked) newAiConfig[tf] = parseInt(document.getElementById(`ai-count-${tf}`).value) || 20;
+            });
+            config.ai_context = newAiConfig;
+            await pywebview.api.save_config("ai_context", newAiConfig);
+        }
+
+        function toggleAIContext() {
+            const menu = document.getElementById('ai-context-menu');
+            const icon = document.getElementById('ai-context-icon');
+            if (menu.classList.contains('hidden')) {
+                menu.classList.remove('hidden');
+                icon.classList.add('rotate-180');
+            } else {
+                menu.classList.add('hidden');
+                icon.classList.remove('rotate-180');
+            }
+        }
+
+        async function refreshModels() {
+            const btn = document.getElementById('btn-refresh-models');
+            const modelSelect = document.getElementById('model-select');
+            const currentModel = modelSelect.value;
+            if(btn) btn.innerHTML = `<div class="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin"></div>`;
+            const models = await pywebview.api.get_ollama_models();
+            modelSelect.innerHTML = '';
+            if(models && models.length > 0) {
+                models.forEach(m => { modelSelect.add(new Option(m, m)); });
+                if(currentModel && models.includes(currentModel)) modelSelect.value = currentModel;
+            } else {
+                modelSelect.add(new Option("ไม่พบโมเดล", ""));
+            }
+            if(btn) btn.innerHTML = "🔄";
+        }
+
         function changeTF(tf) {
             config.timeframe = tf;
             pywebview.api.save_config("timeframe", tf);
             updateTFUI(tf);
-            
             if(ws && ws.readyState === WebSocket.OPEN) {
-                // ส่งคำสั่งเปลี่ยน TF ไปที่ Server ทันที
                 ws.send(JSON.stringify({action: "change_tf", tf: tf}));
             } else {
                 connectToServer();
@@ -189,7 +271,6 @@
             document.getElementById('chart-header-title').innerText = `| ${config.last_symbol} (${tf})`;
         }
 
-        // --- ระบบสลับคู่เงิน แบบ Realtime ไร้รอยต่อ ---
         function refreshSymbolList() {
             const selectEl = document.getElementById('symbol-select');
             selectEl.innerHTML = '';
@@ -226,9 +307,7 @@
             config.last_symbol = e.target.value;
             await pywebview.api.save_config("last_symbol", config.last_symbol);
             document.getElementById('chart-header-title').innerText = `| ${config.last_symbol} (${config.timeframe})`;
-            
             if(ws && ws.readyState === WebSocket.OPEN) {
-                // ส่งคำสั่งเปลี่ยนคู่เงิน ไปที่ Server ทันที
                 ws.send(JSON.stringify({action: "change_symbol", symbol: config.last_symbol}));
             } else {
                 connectToServer();
@@ -248,14 +327,13 @@
             ws = new WebSocket(`ws://${ip}:${port}/ws/chart?symbol=${config.last_symbol}&timeframe=${config.timeframe}`);
             
             ws.onopen = () => { 
-                statusEl.className = "px-2 py-1 bg-green-600 rounded text-sm shadow"; statusEl.innerText = "MT5 Online"; 
+                statusEl.className = "px-2 py-1 bg-green-600 rounded text-sm shadow font-bold"; statusEl.innerText = "MT5 Online"; 
                 btn.innerText = `Connected`; btn.className = "w-full bg-green-600 py-3 rounded font-bold transition shadow-lg cursor-default";
             };
             
             ws.onmessage = (event) => {
                 const msg = JSON.parse(event.data);
                 if (msg.type === 'history') { 
-                    // ใช้ applyNewData เพื่อเคลียร์กราฟเก่าและวาดใหม่ทันที
                     chart.applyNewData(msg.data.map(r => ({ timestamp: r.time * 1000, open: r.open, high: r.high, low: r.low, close: r.close, volume: r.volume })));
                 } else if (msg.type === 'tick') {
                     chart.updateData({ timestamp: msg.data.time * 1000, open: msg.data.open, high: msg.data.high, low: msg.data.low, close: msg.data.close, volume: msg.data.volume });
@@ -264,7 +342,7 @@
             };
             
             ws.onclose = () => { 
-                statusEl.className = "px-2 py-1 bg-red-600 rounded text-sm shadow"; statusEl.innerText = "MT5 Offline"; 
+                statusEl.className = "px-2 py-1 bg-red-600 rounded text-sm shadow font-bold"; statusEl.innerText = "MT5 Offline"; 
                 btn.innerText = "Connect Server"; btn.className = "w-full bg-blue-600 hover:bg-blue-500 py-3 rounded font-bold transition shadow-lg";
             };
         }
@@ -281,37 +359,7 @@
         }
 
         document.getElementById('profile-select').addEventListener('change', loadProfile);
-        document.getElementById('prompt-box').addEventListener('input', saveCurrentProfile);
-        document.getElementById('model-select').addEventListener('change', saveCurrentProfile);
 
-// --- ฟังก์ชันรีโหลดรายชื่อโมเดล AI ---
-        async function refreshModels() {
-            const btn = document.getElementById('btn-refresh-models');
-            const modelSelect = document.getElementById('model-select');
-            const currentModel = modelSelect.value; // จำโมเดลที่เลือกไว้ล่าสุด
-            
-            // เปลี่ยนหน้าตาปุ่มเพื่อให้รู้ว่ากำลังโหลด
-            if(btn) btn.innerHTML = `<div class="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin"></div>`;
-
-            // ดึงรายชื่อใหม่จาก Python
-            const models = await pywebview.api.get_ollama_models();
-            modelSelect.innerHTML = '';
-            
-            if(models && models.length > 0) {
-                models.forEach(m => { modelSelect.add(new Option(m, m)); });
-                
-                // ถ้าโมเดลเดิมยังอยู่ในเครื่อง ให้เลือกตัวเดิมไว้
-                if(currentModel && models.includes(currentModel)) {
-                    modelSelect.value = currentModel;
-                }
-            } else {
-                modelSelect.add(new Option("ไม่พบโมเดล", ""));
-            }
-
-            // คืนหน้าตาปุ่มกลับเป็นปกติ
-            if(btn) btn.innerHTML = "🔄";
-        }
-		
         async function loadProfile() {
             const profileName = document.getElementById('profile-select').value;
             if(!profileName) return;
@@ -319,19 +367,34 @@
             if(profile) {
                 const modelSelect = document.getElementById('model-select');
                 if(profile.model && Array.from(modelSelect.options).some(opt => opt.value === profile.model)) modelSelect.value = profile.model;
-                document.getElementById('prompt-box').value = profile.prompt || "";
+                
+                // โหลดข้อความใส่ทั้งกล่อง System และ User แยกขาดจากกัน
+                document.getElementById('system-prompt-box').value = profile.system_prompt || "";
+                document.getElementById('prompt-box').value = profile.user_prompt || profile.prompt || "";
             }
         }
 
         async function saveCurrentProfile() {
             const profileName = document.getElementById('profile-select').value;
-            if(profileName) await pywebview.api.save_profile(profileName, document.getElementById('model-select').value, document.getElementById('prompt-box').value);
+            if(profileName) {
+                await pywebview.api.save_profile(
+                    profileName, 
+                    document.getElementById('model-select').value, 
+                    document.getElementById('system-prompt-box').value,
+                    document.getElementById('prompt-box').value
+                );
+            }
         }
 
         async function addProfile() {
             const newName = prompt("ตั้งชื่อโปรไฟล์ใหม่:");
             if(newName && newName.trim()) {
-                await pywebview.api.save_profile(newName.trim(), document.getElementById('model-select').value, document.getElementById('prompt-box').value);
+                await pywebview.api.save_profile(
+                    newName.trim(), 
+                    document.getElementById('model-select').value, 
+                    document.getElementById('system-prompt-box').value,
+                    document.getElementById('prompt-box').value
+                );
                 await refreshProfileList();
             }
         }
@@ -345,10 +408,12 @@
             }
         }
 
+        // ระบบรวบรวมข้อมูลราคาป้อนเข้าสู่แชทอย่างเป็นสัดส่วน
         async function runAnalysis() {
             const profileName = document.getElementById('profile-select').value;
             const model = document.getElementById('model-select').value;
             const userPrompt = document.getElementById('prompt-box').value;
+            const systemPrompt = document.getElementById('system-prompt-box').value;
             const reportBox = document.getElementById('ai-report');
             const btn = document.getElementById('btn-analyze');
             const ip = document.getElementById('server-ip').value.trim();
@@ -358,35 +423,42 @@
             if(document.getElementById('status-mt5').innerText === "MT5 Offline") return alert("กรุณา Connect Server ก่อนครับ");
 
             await saveCurrentProfile();
+            await saveAIContext();
             
             btn.innerHTML = `<div class="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin"></div> <span>ดึงข้อมูล & วิเคราะห์...</span>`;
             btn.className = "w-full bg-indigo-800 py-3 mt-3 rounded font-bold transition shadow-lg cursor-wait flex justify-center items-center gap-2";
             reportBox.innerHTML = `<div class="flex flex-col items-center justify-center h-full space-y-3 text-indigo-400">
                 <div class="w-6 h-6 border-4 border-t-transparent border-indigo-400 rounded-full animate-spin"></div>
-                <span>กำลังดึงข้อมูลตลาดสด และวิเคราะห์ด้วย ${model}...</span>
+                <span>กำลังโหลดข้อมูลกราฟ และวิเคราะห์ด้วย ${model}...</span>
             </div>`;
 
             let marketDataText = `\n\n=== ข้อมูลตลาดปัจจุบัน (${config.last_symbol}) ===\n`;
-            try {
-                // ดึง TF ปัจจุบัน (20 แท่งล่าสุด)
-                const res1 = await fetch(`http://${ip}:${port}/api/data?symbol=${config.last_symbol}&timeframe=${config.timeframe}&count=20`);
-                const data1 = await res1.json();
-                if(data1.status === 'success') {
-                    marketDataText += `[Timeframe ${config.timeframe} (20 แท่งล่าสุด)]\n`;
-                    data1.data.forEach(d => { marketDataText += `เวลา: ${formatBrokerTime(d.time)} | O: ${d.open} | H: ${d.high} | L: ${d.low} | C: ${d.close}\n`; });
+            
+            for (const tf of ALL_TFS) {
+                const isChecked = document.getElementById(`ai-tf-${tf}`).checked;
+                const count = parseInt(document.getElementById(`ai-count-${tf}`).value) || 20;
+                
+                if (isChecked && count > 0) {
+                    try {
+                        const res = await fetch(`http://${ip}:${port}/api/data?symbol=${config.last_symbol}&timeframe=${tf}&count=${count}`);
+                        const data = await res.json();
+                        if(data.status === 'success') {
+                            marketDataText += `[Timeframe ${tf} (${count} แท่งล่าสุด)]\n`;
+                            data.data.forEach(d => { marketDataText += `เวลา: ${formatBrokerTime(d.time)} | O: ${d.open} | H: ${d.high} | L: ${d.low} | C: ${d.close}\n`; });
+                            marketDataText += `\n`;
+                        }
+                    } catch(e) { console.error(`API Error สำหรับ ${tf}`, e); }
                 }
+            }
 
-                // ดึง 1D (5 วันล่าสุด) เพื่อวิเคราะห์ภาพรวม Trend
-                const res2 = await fetch(`http://${ip}:${port}/api/data?symbol=${config.last_symbol}&timeframe=1D&count=5`);
-                const data2 = await res2.json();
-                if(data2.status === 'success') {
-                    marketDataText += `\n[Timeframe 1D ภาพรวม (5 แท่งล่าสุด)]\n`;
-                    data2.data.forEach(d => { marketDataText += `เวลา: ${formatBrokerTime(d.time)} | O: ${d.open} | H: ${d.high} | L: ${d.low} | C: ${d.close}\n`; });
-                }
-            } catch(e) { console.error("API Error", e); }
+            if (marketDataText.trim() === `=== ข้อมูลตลาดปัจจุบัน (${config.last_symbol}) ===`) {
+                marketDataText += `\n(ไม่มีข้อมูลส่งมาเนื่องจากไม่ได้เลือก Timeframe ในระบบ)\n`;
+            }
 
-            const finalPrompt = userPrompt + marketDataText;
-            const result = await pywebview.api.analyze_market(model, finalPrompt);
+            const finalUserPrompt = userPrompt + marketDataText;
+            
+            // เรียกผ่านระบบแชทแบบสากล แยก System Prompt และ User Prompt
+            const result = await pywebview.api.analyze_market(model, systemPrompt, finalUserPrompt);
             
             btn.innerHTML = `✨ Start AI Analysis`;
             btn.className = "w-full bg-indigo-600 hover:bg-indigo-500 py-3 mt-3 rounded font-bold transition shadow-lg flex justify-center items-center gap-2";
